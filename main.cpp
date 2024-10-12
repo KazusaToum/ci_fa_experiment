@@ -19,21 +19,26 @@ int main(int argc, char* argv[])
     }
 
     string line;
-    int line_count = 0;
-    attribute total;
-    /*程序每次运行只需要考虑识别一个C语言程序;
-      需要使用读取文件的操作,可以在自己的本地环境里创建样例文件进行测试；
-      在自己的IDE里测试时可以将file_name赋其他的值，
-      但注意，最终测评时由平台提供的main参数来传入文件名*/
+    int lineCount = 0;
     while ( getline(file, line) )
     {
-        line_count++;
-
+        lineCount++;
+        Lexer lexer(line, lineCount);
+        vector<Token> tokens = lexer.tokenize();
+        // 输出每个 token 以及行号
+        for (const Token& token : tokens)
+        {
+            cout << token.lineNumber << " <"
+                 << token.getTokenTypeString() << ","
+                 << token.value << ">\n";
+        }
     }
-
+    cout << lineCount << endl;
+    cout << record[0];
+    for(int i = 0; i < 7; i++)
+        cout <<  ' ' <<record[i];
+    cout << endl << record[7];
     file.close(); // 关闭文件
-
-    std::cout << "文件总共有 " << line_count << " 行。" << std::endl;
 
 	return 0;
 }
