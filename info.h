@@ -24,7 +24,7 @@ enum TokenType
     ERROR         //错误
 };
 int record[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-
+int state = 0;
 // Token 类, 表示一个词法记号，包含类型 TokenType 和值 value，并有方法返回类型的字符串表示。
 class Token
 {
@@ -126,7 +126,7 @@ public:
     vector<Token> tokenize()
     {
         vector<Token> tokens;
-        int state = 0;
+
         char current;
         while (pos < input.size())
         {
@@ -150,8 +150,8 @@ public:
                             state = 1;
                             break;
 
-                        case '-': case '+': case '=': case '%': case '*': case '/': case '&':
-                        case '|': case '!': case '<': case '>': case '.': case '^': case '~':
+                        case '-': case '+': case '=': case '%': case '*': case '&': case '|':
+                        case '!': case '<': case '>': case '.': case '^': case '~':
                             state = 2;
                             break;
 
@@ -159,10 +159,28 @@ public:
                         case '}': case '[': case ']':
                             state = 3;
                             break;
-
+                       case '\'':
+                            state = 4;
+                            break;
+                        case '\"':
+                            state = 5;
+                            break;
+                        case '/':    //可能是注释
+                            if(pos + 1 < input.size())
+                            {
+                                if(input[pos + 1] == '/')
+                                    state = 6;
+                                else if(input[pos + 1] == '*')
+                                    state = 7;
+                                else
+                                    state = 2;
+                            }
+                            else
+                                state = 2;
+                            break;
                         case '0': case '1': case '2': case '3': case '4': case '5': case '6':
                         case '7': case '8': case '9':
-                            state = 5;
+                            state = 25;
                             break;
                         default:
                             next();
@@ -179,6 +197,10 @@ public:
                     if (symbolTable.isKeyword(identifier)) {
                         tokens.push_back(Token(TokenType::KEYWORD, identifier, lineNumber));
                         record[TokenType::KEYWORD]++;
+                    } else
+                    {
+                        tokens.push_back(Token(TokenType::IDENTIFIER,identifier, lineNumber));
+                        record[TokenType::IDENTIFIER]++;
                     }
                     state = 0;
                     break;
@@ -209,6 +231,71 @@ public:
                     tokens.push_back(Token(TokenType::DELIMITER, de, lineNumber));
                     state = 0;
                     break;
+                }
+
+                case 4:
+                {
+                    string charConst;
+                    charConst += next();
+                    while (peek() != '\'')
+                    {
+                        if(peek() != '\\')
+                            charConst += next();
+                        else
+                        {
+                            charConst += next();
+                            charConst += next();
+                        }
+                    }
+                    charConst += next();
+                    tokens.push_back(Token(TokenType::CHAR, charConst, lineNumber));
+                    record[TokenType::CHAR]++;
+                    state = 0;
+                    break;
+                }
+
+                case 5:
+                {
+                    string strConst;
+                    strConst += next();
+                    while (peek() != '\"')
+                    {
+                        if(peek() != '\\')
+                            strConst += next();
+                        else
+                        {
+                            strConst += next();
+                            strConst += next();
+                        }
+                    }
+                    strConst += next();
+                    tokens.push_back(Token(TokenType::STRING, strConst, lineNumber));
+                    record[TokenType::STRING]++;
+                    state = 0;
+                    break;
+                }
+
+                case 6:
+                    pos = input.size();
+                    break;
+                case 7:
+                {
+                    next();
+                    next();
+                    while (peek() != '\0')
+                    {
+                        if(peek() == '*')
+                        {
+                            next();
+                            if(peek() == '\\')
+                            {
+                                state = 0;
+                                break;
+                            } else
+                                next();
+                        } else
+                            next();
+                    }
                 }
                 default:
                     state = 0;
