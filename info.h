@@ -119,8 +119,50 @@ private:
         while (isspace(peek())) next();
     }
 
+    void getNum(string &num)
+    {
+        while (pos < input.size() && state != 0)
+        {
+            switch (state)
+            {
+                case 8:
+                {
+                    while(peek() >= '0' && peek() <= '9')
+                        num += next();
+
+                    if(peek() == '.')
+                        state = 9;
+                    else if(peek() == 'e' || peek() == 'E')
+                        state = 10;
+                    else
+                        state = 0;
+                    break;
+                }
+                case 9:
+                {
+                    num += next();
+                    while(peek() >= '0' && peek() <= '9')
+                        num += next();
+                    if(peek() == 'e' || peek() == 'E')
+                        state = 10;
+                    else
+                        state = 0;
+                    break;
+                }
+                case 10:
+                {
+                    num += next();  //添加e或E
+                    if(peek() == '+' || peek() == '-')
+                        num += next();
+                    while(peek() >= '0' && peek() <= '9')
+                        num += next();
+                    state = 0;
+                }
+            }
+        }
+    }
 public:
-    Lexer(const std::string& input, int lineNumber)
+    Lexer(const string& input, int lineNumber)
             : input(input), pos(0), lineNumber(lineNumber) {}
 
     vector<Token> tokenize()
@@ -159,7 +201,7 @@ public:
                         case '}': case '[': case ']':
                             state = 3;
                             break;
-                       case '\'':
+                        case '\'':
                             state = 4;
                             break;
                         case '\"':
@@ -171,16 +213,21 @@ public:
                                 if(input[pos + 1] == '/')
                                     state = 6;
                                 else if(input[pos + 1] == '*')
+                                {
                                     state = 7;
+                                    pos = pos + 2;
+                                }
                                 else
                                     state = 2;
                             }
                             else
                                 state = 2;
                             break;
+
                         case '0': case '1': case '2': case '3': case '4': case '5': case '6':
                         case '7': case '8': case '9':
-                            state = 25;
+
+                            state = 8;
                             break;
                         default:
                             next();
@@ -277,25 +324,53 @@ public:
 
                 case 6:
                     pos = input.size();
+                    state = 0;
                     break;
                 case 7:
                 {
-                    next();
-                    next();
-                    while (peek() != '\0')
+                    int noteState = 1;
+
+                    while (peek() != '\0' && state != 0)
                     {
-                        if(peek() == '*')
+
+                        switch (noteState)
                         {
-                            next();
-                            if(peek() == '\\')
+                            case 1:
                             {
-                                state = 0;
+                                while(peek() != '*' && peek() != '\0')
+                                    next();
+                                noteState = 2;
                                 break;
-                            } else
-                                next();
-                        } else
-                            next();
+                            }
+                            case 2:
+                            {
+                                next();  //跳过*
+                                if(peek() == '\0')
+                                    break;
+                                if(peek() == '/') /**/
+                                {
+                                    next();
+                                    state = 0;
+                                }
+                                else if(peek() == '*')
+                                    noteState = 2;
+                                else
+                                    noteState = 1;
+                                break;
+                            }
+                        }
                     }
+                    break;
+                }
+
+                case 8:
+                {
+                    string num;
+                    getNum(num);
+                    record[TokenType::NUM]++;
+                    tokens.push_back(Token(TokenType::NUM, num, lineNumber));
+                    state = 0;
+                    break;
                 }
                 default:
                     state = 0;
@@ -335,3 +410,16 @@ public:
 };
 
 #endif //CI_FA_EXPERIMENT_INFO_H
+/*
+                        if(peek() == '*')
+                        {
+                            next();
+                            if(peek() == '\\')
+                            {
+                                state = 0;
+                                break;
+                            } else
+                                next();
+                        } else
+                            next();
+                            */
